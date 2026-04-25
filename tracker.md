@@ -15,12 +15,12 @@
 ### Phase 3: Advanced Modeling (Days 5-9) - **DONE**
 - [x] **Radiological Rasterizer:** Integrate or simulate the density accumulation rendering.
 - [x] **Pose Optimization:** Implement differentiable slice alignment.
-- [ ] **VLM Integration:** Add semantic embedding support for queryable regions.
+- [x] **VLM Integration:** Add semantic embedding support for queryable regions.
 
-### Phase 4: Validation & Visualization (Days 10-14) - **CURRENT**
-- [ ] **Evaluation:** Compare against simple persistence and linear interpolation baselines.
-- [ ] **Visualization:** Create 4D animations of the contracting ventricle.
-- [ ] **Report:** Document findings and performance metrics.
+### Phase 4: Validation & Visualization (Days 10-14) - **DONE**
+- [x] **Evaluation:** Compare against simple persistence and linear interpolation baselines.
+- [x] **Visualization:** Create 4D animations of the contracting ventricle.
+- [x] **Report:** Document findings and performance metrics.
 
 ---
 

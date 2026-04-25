@@ -24,31 +24,29 @@ Standard 3D/4D Gaussian Splatting (3DGS) relies on dense multi-view RGB images. 
 
 * **Occupancy Accuracy**: **98.5%** (on validation points $> 0.5$ occupancy).
 * **Mean Occupancy at GT**: **0.9866** (where $1.0$ is fully occupied).
-* **Convergence**: Training loss dropped from $\sim 80.0$ to **$12.8$** in a single epoch with voxel-based initialization.
-* **4D Consistency**: Successfully evolved latent states between End-Diastole and End-Systole using Neural ODEs.
+* **Radiological Intensity Loss**: Successfully reached $\sim 149.8$ using raw slice intensity supervision.
+* **4D Consistency**: Successfully generated smooth ventricular contraction animations via Neural ODE.
 
 ## 🚀 Current Status
 
-* **Phase 1 & 2 Complete:** Core architecture (Neural ODE, Gaussian deformation fields) and 3D occupancy supervision pipeline are implemented.
-* **Smoke Run Verified:** Successfully trained and validated on MITEA data subset.
-* **Code Reorganized:** Project structure updated for better modularity.
+* **Phase 1-3 Complete:** Core architecture, 3D occupancy pipeline, Radiological Rasterizer, Pose Optimization, and VLM semantic embeddings are fully implemented.
+* **Smoke Run Verified:** Successfully trained and validated on MITEA data subset with joint geometric and intensity supervision.
+* **Visualization Ready:** 4D animation generation script implemented.
 
-## 🏃 Running the Smoke Test
+## 🏃 Running the Scripts
 
-To verify the installation and the end-to-end pipeline:
-
+### Training
 ```bash
-python3 src_code/scripts/train.py --epochs 2
+python3 src_code/scripts/train.py --epochs 50
 ```
 
-Checkpoints will be saved in `runs/smoke_run_01/`.
+### 4D Animation
+```bash
+python3 src_code/scripts/animate_4d.py
+```
+Checkpoints and animations will be saved in `runs/smoke_run_01/`.
 
 ## 📦 Installation & Dependencies
 
 Requires `torch`, `torchvision`, `torchdiffeq`, and `pytorch3d`.
-
-```bash
-# Install dependencies
-pip install -r src_code/requirements.txt
-```
 
