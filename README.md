@@ -20,18 +20,28 @@ Standard 3D/4D Gaussian Splatting (3DGS) relies on dense multi-view RGB images. 
 1. **Sparse Pose Optimization:** Implements a differentiable multi-view projection with learnable pose optimization. This establishes joint slice alignment and initial geometry recovery from sparse 2D echo slices.
 2. **Continuous Evolution:** The ODE solver drives the 4D Gaussian deformation field, morphing the initialized Gaussians across the cardiac time steps to ensure anatomically plausible continuous reconstruction.
 3. **Semantic Querying:** The resulting 4D space can be interactively sliced and queried using text prompts, tracking functional regions of the heart over time.
+## 🚀 Current Status
+
+* **Phase 1 & 2 Complete:** Core architecture (Neural ODE, Gaussian deformation fields) and 3D occupancy supervision pipeline are implemented.
+* **Smoke Run Verified:** Successfully trained for 50 epochs on a subset of MITEA data with dual supervision (ED/ES).
+* **Code Reorganized:** Project structure updated for better modularity.
+
+## 🏃 Running the Smoke Test
+
+To verify the installation and the end-to-end pipeline:
+
+```bash
+python3 src_code/scripts/train.py --epochs 2
+```
+
+Checkpoints will be saved in `runs/smoke_run_01/`.
 
 ## 📦 Installation & Dependencies
 
 Requires `torch`, `torchvision`, `torchdiffeq`, and `pytorch3d`.
 
 ```bash
-git clone [https://github.com/tushar-nayak/CardioEvolve-4DGS.git](https://github.com/tushar-nayak/CardioEvolve-4DGS.git)
-cd CardioEvolve-4DGS
+# Install dependencies
+pip install -r src_code/requirements.txt
+```
 
-# Install standard dependencies
-pip install -r requirements.txt
-
-# Compile the custom radiological Gaussian rasterizer
-cd submodules/diff-radiological-rasterization
-pip install .
