@@ -13,7 +13,7 @@ Standard 3D/4D Gaussian Splatting (3DGS) relies on dense multi-view RGB images. 
 * **Neural ODE Forecasting:** Overcomes the temporal sparsity of ultrasound and MRI scans. Utilizing `TorchDiffEq` and a hybrid Attention U-Net backend, the system evolves the latent states of the 3D Gaussian representation, smoothly interpolating ventricular contraction between observed frames.
 * **Radiological Splatting:** Rewrites the standard rasterizer to accumulate MRI/Ultrasound signal intensity and depth, allowing for the direct visualization of tissue density rather than alpha-composited light.
 * **High-Frequency Boundary Recovery:** Leverages Fourier positional encodings to capture fine anatomical details and sharp boundary edges in the cardiac wall, supervised by volumetric BCE point sampling in unobserved 3D regions.
-* **Temporal Semantic Tracking:** Injects multi-modal VLM embeddings into the explicit Gaussian points. This enables dynamic, open-vocabulary queries—such as isolating a specific valve or tracking the volumetric shift of a semantically-labeled region across the entire cardiac cycle.
+* **Temporal Semantic Tracking:** Injects multi-modal VLM embeddings into the explicit Gaussian points. This enables dynamic, open-vocabulary queriessuch as isolating a specific valve or tracking the volumetric shift of a semantically-labeled region across the entire cardiac cycle.
 
 ## System Architecture
 
