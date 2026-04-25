@@ -7,9 +7,9 @@
 - [x] Implement `MITEADataset` loader.
 - [x] Basic Neural ODE and Gaussian Model architecture.
 
-### Phase 2: Refinement & Smoke Run (Days 3-4) - **CURRENT**
-- [ ] **Smoke Run:** Verify the end-to-end pipeline with a small subset of data.
-- [ ] **Loss Function:** Implement proper 3D occupancy supervision using affine transforms.
+### Phase 2: Refinement & Smoke Run (Days 3-4) - **DONE**
+- [x] **Smoke Run:** Verify the end-to-end pipeline with a small subset of data.
+- [x] **Loss Function:** Implement proper 3D occupancy supervision using affine transforms.
 - [ ] **Git Sync:** Commit and push the initial working skeleton.
 
 ### Phase 3: Advanced Modeling (Days 5-9)
