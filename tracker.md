@@ -1,6 +1,6 @@
-# 🚀 Project Tracker: cardiac-reconstruction-evolved
+# Project Tracker: cardiac-reconstruction-evolved
 
-## 📅 Timeline
+## Timeline
 
 ### Phase 1: Foundation & Data (Days 1-2) - **DONE**
 - [x] Initialize project structure (`code/`, `runs/`, `data/`).
@@ -24,6 +24,6 @@
 
 ---
 
-## 🛠️ Status Notes
+## Status Notes
 - **Current State:** Basic modules implemented. Structure reorganized to `code/` and `runs/`.
 - **Next Step:** Perform smoke run after reorganization.
