@@ -48,6 +48,10 @@ python3 src_code/scripts/animate_4d.py
 ```
 Checkpoints and animations will be saved in `runs/smoke_run_01/`.
 
+## Documentation
+
+For a detailed technical breakdown of the methodology and results, please refer to the [Scientific Manuscript](report.md).
+
 ## Installation & Dependencies
 
 Requires `torch`, `torchvision`, `torchdiffeq`, and `pytorch3d`.
