@@ -1,0 +1,12 @@
+torch>=2.0.0
+torchvision
+torchdiffeq
+pytorch3d
+numpy
+scipy
+nibabel
+opencv-python
+tqdm
+h5py
+wandb
+matplotlib
