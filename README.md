@@ -25,7 +25,8 @@ Standard 3D/4D Gaussian Splatting (3DGS) relies on dense multi-view RGB images. 
 * **Occupancy Accuracy**: **98.5%** (on validation points $> 0.5$ occupancy).
 * **Mean Occupancy at GT**: **0.9866** (where $1.0$ is fully occupied).
 * **Radiological Intensity Loss**: Successfully reached $\sim 149.8$ using raw slice intensity supervision.
-* **4D Consistency**: Successfully generated smooth ventricular contraction animations via Neural ODE.
+* **Spatial Fidelity**: Successfully reconstructed the circular axial cross-section and conical longitudinal profile (apex) of the left ventricle from sparse orthogonal slices.
+* **4D Consistency**: Smooth ventricular contraction animations generated via Neural ODE, accurately depicting physiological systolic thickening.
 
 ## 🚀 Current Status
 
