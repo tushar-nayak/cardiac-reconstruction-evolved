@@ -59,6 +59,9 @@ def train(args):
     for epoch in range(epochs):
         pbar = tqdm.tqdm(enumerate(dataloader), desc=f"Epoch {epoch}", total=len(dataloader))
         for batch_idx, batch in pbar:
+            if epoch == 0 and batch_idx == 0:
+                gaussian_model.initialize_from_voxels(batch['occupancy_ed'], batch['affine'])
+            
             # Input is (B, 3, 200, 200) - 3 sparse slices stacked
             input_ed = batch['sparse_slices_ed'].to(device)
             
@@ -81,8 +84,37 @@ def train(args):
             num_samples = 2000
 
             # Sample points within a bounding box
-            # For now, let's assume world coords centered around 0 with range [-150, 150] mm
-            query_points = (torch.rand(B, num_samples, 3).to(device) * 300.0) - 150.0
+            # Typical heart volume is not uniformly distributed in [-150, 150]
+            # Let's sample points more intelligently: some random, some near GT occupied regions
+            B = z_ed.shape[0]
+            num_samples = 2000
+            
+            # Mixture of uniform and near-GT points
+            query_points = []
+            for i in range(B):
+                # 50% Uniform random in world space
+                # World coordinates seem to be in range [-200, 200] roughly
+                pts_uni = (torch.rand(num_samples // 2, 3).to(device) * 400.0) - 200.0
+                
+                # 50% Near ground truth occupied voxels
+                vol = batch['occupancy_ed'][i]
+                occ_indices = torch.nonzero(vol)
+                if len(occ_indices) > 0:
+                    selected_indices = occ_indices[torch.randint(0, len(occ_indices), (num_samples // 2,))]
+                    # Convert to world coords
+                    pts_img = selected_indices[:, [2, 1, 0]].float().to(device) # (W, H, D)
+                    # Add small noise
+                    pts_img += torch.randn_like(pts_img) * 2.0
+                    
+                    pts_h = torch.cat([pts_img, torch.ones(len(pts_img), 1).to(device)], dim=-1)
+                    affine_i = batch['affine'][i].to(device)
+                    pts_world = (pts_h @ affine_i.T)[:, :3]
+                else:
+                    pts_world = (torch.rand(num_samples // 2, 3).to(device) * 300.0) - 150.0
+                
+                query_points.append(torch.cat([pts_uni, pts_world], dim=0))
+            
+            query_points = torch.stack(query_points)
 
             # Evaluate model occupancy
             occ_pred_ed = gaussian_model.evaluate_occupancy(query_points, params_ed)
@@ -104,7 +136,7 @@ def train(args):
             pbar.set_postfix({'loss': f"{loss.item():.4f}"})
 
         # Save checkpoint periodically
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 1 == 0:
             torch.save({
                 'epoch': epoch,
                 'encoder_state_dict': encoder.state_dict(),

@@ -10,10 +10,10 @@
 ### Phase 2: Refinement & Smoke Run (Days 3-4) - **DONE**
 - [x] **Smoke Run:** Verify the end-to-end pipeline with a small subset of data.
 - [x] **Loss Function:** Implement proper 3D occupancy supervision using affine transforms.
-- [ ] **Git Sync:** Commit and push the initial working skeleton.
+- [x] **Git Sync:** Commit and push the initial working skeleton.
 
-### Phase 3: Advanced Modeling (Days 5-9)
-- [ ] **Radiological Rasterizer:** Integrate or simulate the density accumulation rendering.
+### Phase 3: Advanced Modeling (Days 5-9) - **CURRENT**
+- [x] **Radiological Rasterizer:** Integrate or simulate the density accumulation rendering.
 - [ ] **Pose Optimization:** Implement differentiable slice alignment.
 - [ ] **VLM Integration:** Add semantic embedding support for queryable regions.
 
