@@ -13,6 +13,7 @@ class GaussianModel(nn.Module):
         self.rotations = nn.Parameter(torch.tensor([1., 0., 0., 0.]).repeat(num_gaussians, 1))
         self.opacities = nn.Parameter(torch.ones(num_gaussians, 1) * 1.0)
         self.intensities = nn.Parameter(torch.ones(num_gaussians, 1) * 0.5)
+        self.semantic_embeddings = nn.Parameter(torch.randn(num_gaussians, 512) * 0.01)
 
         # MLP to predict deformations from latent state
         self.deformation_net = nn.Sequential(
@@ -20,7 +21,7 @@ class GaussianModel(nn.Module):
             nn.ReLU(),
             nn.Linear(512, 512),
             nn.ReLU(),
-            nn.Linear(512, num_gaussians * 7) # Predicts delta_means (3), delta_scales (3), delta_opacity (1)
+            nn.Linear(512, num_gaussians * 8) # 3 means, 3 scales, 1 opacity, 1 semantic refinement
         )
 
     def get_covariance(self):
@@ -65,25 +66,28 @@ class GaussianModel(nn.Module):
         Returns the deformed Gaussian parameters
         """
         B = z.shape[0]
-        params = self.deformation_net(z).view(B, self.num_gaussians, 7)
+        params = self.deformation_net(z).view(B, self.num_gaussians, 8)
         
         delta_means = params[..., :3] * 10.0
         delta_scales = params[..., 3:6]
         delta_opacities = params[..., 6:7]
+        delta_semantics = params[..., 7:8]
 
         current_means = self.means.unsqueeze(0) + delta_means
         current_scales = torch.exp(torch.log(self.scales.unsqueeze(0) + 1e-8) + delta_scales)
         current_opacities = torch.sigmoid(self.opacities.unsqueeze(0) + delta_opacities + 10.0)
+        current_semantics = self.semantic_embeddings.unsqueeze(0) + delta_semantics
         
         return {
             'means': current_means,
             'scales': current_scales,
             'rotations': self.rotations,
             'opacities': current_opacities,
-            'intensities': torch.sigmoid(self.intensities)
+            'intensities': torch.sigmoid(self.intensities),
+            'semantics': current_semantics
         }
 
-    def evaluate_occupancy(self, points, gaussian_params, chunk_size=10000):
+    def evaluate_occupancy(self, points, gaussian_params, chunk_size=512):
         """
         points: (B, N, 3) query points
         gaussian_params: dict of params from forward()
@@ -94,31 +98,22 @@ class GaussianModel(nn.Module):
 
         for i in range(0, N, chunk_size):
             chunk_pts = points[:, i:i+chunk_size] # (B, chunk_N, 3)
-            
-            # (B, 1, num_gaussians, 3) - (B, chunk_N, 1, 3) -> (B, chunk_N, num_gaussians, 3)
             means = gaussian_params['means'].unsqueeze(1)
             pts_exp = chunk_pts.unsqueeze(2)
             
             diff = pts_exp - means
             scales = gaussian_params['scales']
-            if scales.dim() == 3: # (B, num_gaussians, 3)
-                scales = scales.unsqueeze(1) # (B, 1, num_gaussians, 3)
-            else:
-                scales = scales.unsqueeze(0).unsqueeze(0)
+            if scales.dim() == 3: scales = scales.unsqueeze(1)
+            else: scales = scales.unsqueeze(0).unsqueeze(0)
             
-            # (B, chunk_N, num_gaussians)
             exponent = -0.5 * torch.sum((diff / (scales + 1e-8))**2, dim=-1)
             
             opacities = gaussian_params['opacities']
-            if opacities.dim() == 3: # (B, num_gaussians, 1)
-                opacities = opacities.transpose(-1, -2) # (B, 1, num_gaussians)
-            else:
-                opacities = opacities.unsqueeze(0).transpose(-1, -2)
+            if opacities.dim() == 3: opacities = opacities.transpose(-1, -2)
+            else: opacities = opacities.unsqueeze(0).transpose(-1, -2)
             
-            # occupancy = sum(opacity * exp(exponent))
             weights = torch.exp(exponent)
             occupancy_chunk = torch.sum(weights * opacities, dim=-1)
-            
             all_occupancies.append(occupancy_chunk)
             
         occupancy = torch.cat(all_occupancies, dim=1)

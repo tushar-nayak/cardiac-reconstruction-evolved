@@ -55,6 +55,26 @@ class MITEADataset(Dataset):
         # Pad with zeros
         return F.pad(tensor, (0, pad_w, 0, pad_h))
 
+    def _get_slice_pose(self, affine, slice_idx, axis, shape):
+        """
+        Calculates the camera pose (R, T) for a given slice.
+        axis: 0 (h), 1 (w), 2 (d)
+        """
+        # Centers of the volume in image coords
+        h, w, d = shape
+        center_img = torch.tensor([w/2, h/2, d/2, 1.0])
+        center_world = (torch.from_numpy(affine).float() @ center_img)[:3]
+        
+        # This is a simplification. For a real differentiable rasterizer,
+        # we need the exact plane equations or viewing transformation.
+        # For now, let's return the affine and slice metadata.
+        return {
+            'affine': torch.from_numpy(affine).float(),
+            'slice_idx': slice_idx,
+            'axis': axis,
+            'center_world': center_world
+        }
+
     def __getitem__(self, idx):
         subject = self.subject_ids[idx]
         
@@ -85,11 +105,20 @@ class MITEADataset(Dataset):
         # Extract middle slices
         h, w, d = img_ed.shape
         
+        # Slices along different axes
         slices_ed = [
             torch.from_numpy(img_ed[h//2, :, :]),
             torch.from_numpy(img_ed[:, w//2, :]),
             torch.from_numpy(img_ed[:, :, d//2])
         ]
+        
+        # Metadata for each slice
+        poses_ed = [
+            self._get_slice_pose(img_ed_nii.affine, h//2, 0, (h, w, d)),
+            self._get_slice_pose(img_ed_nii.affine, w//2, 1, (h, w, d)),
+            self._get_slice_pose(img_ed_nii.affine, d//2, 2, (h, w, d))
+        ]
+
         slices_es = [
             torch.from_numpy(img_es[h//2, :, :]),
             torch.from_numpy(img_es[:, w//2, :]),
@@ -102,8 +131,10 @@ class MITEADataset(Dataset):
 
         return {
             'subject': subject,
+            'index': idx,
             'sparse_slices_ed': slices_ed,
             'sparse_slices_es': slices_es,
+            'poses_ed': poses_ed,
             'occupancy_ed': torch.from_numpy(lbl_ed).float(),
             'occupancy_es': torch.from_numpy(lbl_es).float(),
             'affine': torch.from_numpy(img_ed_nii.affine).float()

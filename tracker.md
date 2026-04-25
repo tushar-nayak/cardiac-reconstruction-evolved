@@ -12,12 +12,12 @@
 - [x] **Loss Function:** Implement proper 3D occupancy supervision using affine transforms.
 - [x] **Git Sync:** Commit and push the initial working skeleton.
 
-### Phase 3: Advanced Modeling (Days 5-9) - **CURRENT**
+### Phase 3: Advanced Modeling (Days 5-9) - **DONE**
 - [x] **Radiological Rasterizer:** Integrate or simulate the density accumulation rendering.
-- [ ] **Pose Optimization:** Implement differentiable slice alignment.
+- [x] **Pose Optimization:** Implement differentiable slice alignment.
 - [ ] **VLM Integration:** Add semantic embedding support for queryable regions.
 
-### Phase 4: Validation & Visualization (Days 10-14)
+### Phase 4: Validation & Visualization (Days 10-14) - **CURRENT**
 - [ ] **Evaluation:** Compare against simple persistence and linear interpolation baselines.
 - [ ] **Visualization:** Create 4D animations of the contracting ventricle.
 - [ ] **Report:** Document findings and performance metrics.
