@@ -131,14 +131,14 @@ def train(args):
 
             loss_img = torch.tensor(0.0).to(device)
             for b in range(B):
-                for s in range(1):
+                for s in range(len(refined_poses_ed[b])):
                     pose = refined_poses_ed[b][s]
                     params_b = {k: v[b:b+1] if v.dim() > 2 else v for k, v in params_ed.items()}
                     img_pred = rasterizer(params_b, pose)
                     img_target = batch['sparse_slices_ed'][b, s].to(device).unsqueeze(0)
                     loss_img += F.mse_loss(img_pred, img_target)
             
-            loss_img = loss_img / B
+            loss_img = loss_img / (B * len(refined_poses_ed[0]))
             loss_sparse = torch.mean(params_ed['opacities']) + 0.01 * torch.mean(params_ed['scales'])
             loss = loss_occ + 1.0 * loss_img + 0.1 * loss_sparse
 
