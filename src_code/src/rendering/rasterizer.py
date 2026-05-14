@@ -16,11 +16,14 @@ class RadiologicalRasterizer(nn.Module):
         G = gaussian_params['means'].shape[1]
         H, W = slice_shape
         
-        # Move everything to CPU for computation
         means_cpu = gaussian_params['means'].detach().cpu()
         scales_cpu = gaussian_params['scales'].detach().cpu()
         if scales_cpu.dim() == 2: scales_cpu = scales_cpu.unsqueeze(0).expand(B, -1, -1)
-        oi_cpu = (gaussian_params['opacities'].detach().cpu() * gaussian_params['intensities'].detach().cpu()).squeeze(-1)
+        
+        # Use opacities directly (already sigmoid in forward pass)
+        opacities_cpu = gaussian_params['opacities'].detach().cpu()
+        intensities_cpu = gaussian_params['intensities'].detach().cpu()
+        oi_cpu = (opacities_cpu * intensities_cpu).squeeze(-1)
         if oi_cpu.dim() == 1: oi_cpu = oi_cpu.unsqueeze(0).expand(B, -1)
         
         with torch.no_grad():
