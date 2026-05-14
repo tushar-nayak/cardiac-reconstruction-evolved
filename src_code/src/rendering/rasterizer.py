@@ -28,12 +28,12 @@ class RadiologicalRasterizer(nn.Module):
         slice_idx = pose['slice_idx']
 
         if axis == 0:
-            pts_img[..., 0] = grid_u
-            pts_img[..., 1] = slice_idx
-            pts_img[..., 2] = grid_v
-        elif axis == 1:
             pts_img[..., 0] = slice_idx
             pts_img[..., 1] = grid_u
+            pts_img[..., 2] = grid_v
+        elif axis == 1:
+            pts_img[..., 0] = grid_u
+            pts_img[..., 1] = slice_idx
             pts_img[..., 2] = grid_v
         else:
             pts_img[..., 0] = grid_u
