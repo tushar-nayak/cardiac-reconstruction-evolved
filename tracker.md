@@ -25,5 +25,5 @@
 ---
 
 ## Status Notes
-- **Current State:** Basic modules implemented. Structure reorganized to `code/` and `runs/`.
-- **Next Step:** Perform smoke run after reorganization.
+- **Current State:** Stabilized occupancy pipeline, updated evaluation scripts, and current diagnostics in `runs/`.
+- **Next Step:** Improve cavity/wall separation and validate the latest evaluation outputs.

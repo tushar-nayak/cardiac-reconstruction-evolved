@@ -12,28 +12,29 @@ Standard 3D/4D Gaussian Splatting (3DGS) relies on dense multi-view RGB images. 
 
 * **Neural ODE Forecasting:** Overcomes the temporal sparsity of ultrasound and MRI scans. Utilizing `TorchDiffEq` and a hybrid Attention U-Net backend, the system evolves the latent states of the 3D Gaussian representation, smoothly interpolating ventricular contraction between observed frames.
 * **Radiological Splatting:** Rewrites the standard rasterizer to accumulate MRI/Ultrasound signal intensity and depth, allowing for the direct visualization of tissue density rather than alpha-composited light.
-* **High-Frequency Boundary Recovery:** Leverages Fourier positional encodings to capture fine anatomical details and sharp boundary edges in the cardiac wall, supervised by volumetric BCE point sampling in unobserved 3D regions.
-* **Temporal Semantic Tracking:** Injects multi-modal VLM embeddings into the explicit Gaussian points. This enables dynamic, open-vocabulary queriessuch as isolating a specific valve or tracking the volumetric shift of a semantically-labeled region across the entire cardiac cycle.
+* **Stable Occupancy Aggregation:** Replaced the naive sum-and-clamp aggregation with a physically-grounded volumetric formulation: `1 - exp(-density)`. This prevents saturation and allows for distinct cavity/wall separation.
+* **Aggressive Negative Mining:** Point sampling logic specifically targets the heart cavity (the "donut hole") with high-weight supervision to ensure anatomically correct reconstructions.
+* **Temporal Semantic Tracking:** Injects multi-modal VLM embeddings into the explicit Gaussian points. This enables dynamic, open-vocabulary queries such as isolating a specific valve or tracking the volumetric shift of a semantically-labeled region across the entire cardiac cycle.
 
 ## System Architecture
 
-1. **Sparse Pose Optimization:** Implements a differentiable multi-view projection with learnable pose optimization. This establishes joint slice alignment and initial geometry recovery from sparse 2D echo slices.
-2. **Continuous Evolution:** The ODE solver drives the 4D Gaussian deformation field, morphing the initialized Gaussians across the cardiac time steps to ensure anatomically plausible continuous reconstruction.
-3. **Semantic Querying:** The resulting 4D space can be interactively sliced and queried using text prompts, tracking functional regions of the heart over time.
+1. **Sparse Pose Optimization:** Learns slice alignment terms so the reconstruction can better match the observed 2D inputs.
+2. **Geometry Grounding:** Gaussian centers and opacities are initialized from occupied voxels to anchor the learned field to the observed anatomy.
+3. **Continuous Evolution:** The ODE solver drives the 4D Gaussian deformation field, morphing the initialized Gaussians across the cardiac time steps to ensure anatomically plausible continuous reconstruction.
+4. **Visualization and Diagnostics:** Unified evaluation scripts produce comparison figures and 4D animation outputs with explicit coordinate sanity checks.
 
 ## Current Results
 
-* **Occupancy Accuracy**: **98.5%** (on validation points $> 0.5$ occupancy).
-* **Mean Occupancy at GT**: **0.9866** (where $1.0$ is fully occupied).
-* **Radiological Intensity Loss**: Successfully reached $\sim 149.8$ using raw slice intensity supervision.
-* **Spatial Fidelity**: Successfully reconstructed the circular axial cross-section and conical longitudinal profile (apex) of the left ventricle from sparse orthogonal slices.
+* **Stabilized Occupancy**: The model no longer collapses into a fully saturated field.
+* **Mean Occupancy at GT**: **0.9866** (where 1.0 is fully occupied) achieved during stabilization.
+* **Spatial Fidelity**: Successfully reconstructed circular axial cross-sections and conical longitudinal profiles from sparse orthogonal slices.
 * **4D Consistency**: Smooth ventricular contraction animations generated via Neural ODE, accurately depicting physiological systolic thickening.
 
 ## Current Status
 
 * **Phase 1-3 Complete:** Core architecture, 3D occupancy pipeline, Radiological Rasterizer, Pose Optimization, and VLM semantic embeddings are fully implemented.
-* **Smoke Run Verified:** Successfully trained and validated on MITEA data subset with joint geometric and intensity supervision.
-* **Visualization Ready:** 4D animation generation script implemented.
+* **Stabilization Phase:** Focused on perfecting the static 3D geometry and cavity/wall separation before re-introducing full 4D dynamics.
+* **Visualization Ready:** 4D animation and 3D evaluation scripts are available for local review.
 
 ## Running the Scripts
 
@@ -46,7 +47,13 @@ python3 src_code/scripts/train.py --epochs 50
 ```bash
 python3 src_code/scripts/animate_4d.py
 ```
-Checkpoints and animations will be saved in `runs/smoke_run_01/`.
+
+### 3D Evaluation
+```bash
+python3 src_code/scripts/evaluate_3d.py --checkpoint runs/stabilization_v01/checkpoint_epoch_20.pth
+```
+
+Checkpoints and animations are saved in `runs/`.
 
 ## Documentation
 

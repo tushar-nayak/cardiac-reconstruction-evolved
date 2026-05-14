@@ -1,41 +1,41 @@
-# Continuous 4D Ventricular Reconstruction from Sparse Cardiac Imaging via Neural ODE-driven Gaussian Splatting
+# Cardiac Reconstruction from Sparse Imaging via Stabilized Gaussian Occupancy Fields
 
 ## Abstract
-Accurate 3D reconstruction of cardiac dynamics from sparse 2D imaging remains a significant challenge in clinical diagnostics. We present CardioEvolve-4DGS, a framework that recovers continuous 4D ventricular occupancy fields from highly sparse and temporally distinct 2D echocardiography or MRI sequences. By integrating Neural Ordinary Differential Equations (Neural ODEs) with a deformable 4D Gaussian Splatting representation, our method achieves smooth spatiotemporal interpolation and high-fidelity boundary recovery. We introduce a custom radiological rasterizer for differentiable density accumulation and a pose optimization module for learnable slice alignment. Experimental results on the MITEA dataset demonstrate a voxel occupancy accuracy of 98.5% and a mean occupancy score of 0.9866, with visual confirmation of physiological systolic thickening and anatomical consistency.
+Accurate 3D reconstruction from sparse 2D imaging remains a useful testbed for evaluating latent-field models, occupancy aggregation, and coordinate handling. This project now focuses on stabilized Gaussian occupancy fields and qualitative diagnostics rather than a full temporal reconstruction claim. The current codebase includes a probabilistic occupancy aggregator, voxel-grounded Gaussian initialization, and comparison figures generated from the latest runs.
 
 ## Introduction
-Standard 3D cardiac imaging often requires dense multi-view acquisitions that are time-consuming and sensitive to patient motion. In contrast, 2D echocardiography and sparse MRI provide high temporal resolution but lack 3D spatial context. Current reconstruction methods often rely on simple linear interpolation or rigid templates, which fail to capture the complex, non-linear deformation of the ventricular wall. This study proposes an explicit 4D representation using Gaussian Splatting, where temporal continuity is enforced by a Neural ODE backend, allowing for the reconstruction of the entire cardiac cycle from only a few observed slices.
+Standard sparse imaging setups often lack enough context for direct reconstruction. The current implementation uses a 3D occupancy field inferred from sparse slices, then validates the output with direct slice comparisons and cavity-versus-wall diagnostics. The emphasis is on making the representation numerically stable and easy to inspect.
 
 ## Materials and Methods
 
-### 1. 4D Gaussian Deformation Fields
-The ventricular geometry is represented by a set of 5,000 anisotropic Gaussian kernels. Each Gaussian is parameterized by a mean position, scale, rotation, and opacity. To model cardiac motion, we implement a deformation network that predicts per-Gaussian parameter shifts (means, scales, and opacities) as a function of a latent temporal state.
+### 1. Gaussian Occupancy Fields
+The geometry is represented by a set of anisotropic Gaussian kernels. Each Gaussian is parameterized by a mean position, scale, rotation, and opacity. The current stabilization pass reduces the number of Gaussians and grounds initial positions from occupied voxels.
 
-### 2. Temporal Dynamics via Neural ODEs
-To ensure smooth transition between End-Diastole (ED) and End-Systole (ES), we utilize a Neural ODE to evolve the latent representation. The system learns a velocity field in the latent space, $dz/dt = f(z, t; \theta)$, where $t \in [0, 1]$. This formulation enables continuous-time querying of the heart's state, providing a physically plausible trajectory of contraction and relaxation.
+### 2. Latent Dynamics
+The earlier ODE-based motion model is still present in the repository, but the latest stabilization path focuses on static reconstruction. This reduces one major source of instability while preserving a path for future temporal experiments.
 
-### 3. Differentiable Radiological Rasterization
-We developed a custom radiological rasterizer to enable direct supervision from raw 2D image intensities. Unlike standard RGB splatting, this renderer accumulates Gaussian density and signal intensity along rays. To handle the computational load within GPU memory constraints, we implemented a memory-efficient chunking strategy that processes Gaussian contributions in subsets, ensuring stability during backpropagation.
+### 3. Differentiable Rasterization
+The project retains a custom rasterizer for slice supervision and intensity matching. The present emphasis is on verifying whether rendered slices align with the observed input rather than matching a full clinical rendering pipeline.
 
 ### 4. Multi-view Pose Optimization
-To correct for potential misalignments in the input sparse slices, we integrated a differentiable pose optimizer. This module learns small rotation and translation deltas for each slice's coordinate system, minimizing the discrepancy between intersecting planes and the predicted 3D volume.
+A differentiable pose optimizer remains part of the training stack. It is used to reduce slice misalignment and improve correspondence between sparse observations and the occupancy field.
 
-### 5. Semantic Embedding and Vision-Language Integration
-Each Gaussian kernel is augmented with a 512-dimensional semantic embedding. A consistency loss is applied to ensure these embeddings remain stable throughout the deformation process, facilitating downstream tasks such as region-specific anatomical tracking and open-vocabulary semantic querying.
+### 5. Semantic Embedding
+Semantic embeddings remain in the model but are currently a secondary concern relative to occupancy stability and geometry grounding.
 
 ## Results
 
-### 1. Quantitative Performance
-The framework was evaluated on the MITEA dataset using 3D occupancy labels as ground truth. At the validation points, the model achieved an average occupancy score of 0.9866 (where 1.0 represents full tissue occupancy). The accuracy of identifying occupied voxels (threshold > 0.5) reached 98.5%. The training loss, which combines volumetric binary cross-entropy and radiological image reconstruction error, demonstrated rapid convergence following voxel-based initialization.
+### 1. Quantitative Status
+The latest run produces stabilized checkpoints and a 3D comparison artifact. The diagnostic emphasis is now on whether the model separates cavity from wall and whether the predicted occupancy is no longer uniformly saturated.
 
 ### 2. Spatial Fidelity
-Visual analysis of the reconstructed volumes (Axial, Coronal, and Sagittal views) confirms that the model correctly recovers the circular cross-section of the ventricular cavity and the conical profile of the cardiac apex. The integration of pose optimization eliminated artifacts such as "ghosting" or double-edges at slice intersections, resulting in a unified anatomical structure.
+The current figures show a visible target-shaped envelope in the predicted slices, but the result remains smoother and thicker than the ground truth. This indicates partial success: the occupancy field is no longer collapsed, yet it still lacks a sharp internal cavity structure.
 
-### 3. Temporal Dynamics and Mass Consistency
-4D animations of the contracting ventricle reveal fluid motion with observable systolic thickening. As the cavity volume decreases, the Gaussian kernels adapt their scales and positions to maintain the integrity of the myocardial wall, preserving the total mass of the tissue across the cardiac cycle.
+### 3. Temporal Dynamics
+The animation artifact is currently best interpreted as a diagnostic output. It is useful for checking continuity in the latent evolution path, but it should not yet be treated as a validated motion model.
 
 ## Discussion
-The success of CardioEvolve-4DGS lies in its ability to bridge the gap between sparse 2D observations and continuous 3D representations. The Neural ODE provides a superior temporal prior compared to discrete interpolation, capturing the non-linear nature of cardiac contraction. Furthermore, the radiological rasterizer allows the model to leverage raw pixel data, reducing the reliance on perfect 3D segmentations for every frame. Future work will focus on integrating these semantic embeddings with Vision-Language Models for automated clinical reporting.
+The stabilization pass improved the numerical behavior of the occupancy field, but the model is still underconstrained relative to the complexity of the reconstruction problem. The main remaining challenge is to sharpen the cavity/wall separation without reintroducing saturation or instability. Future work should focus on stronger geometric priors, tighter coordinate validation, and more explicit supervision of the hollow interior structure.
 
 ## Conclusion
-We have demonstrated a robust framework for 4D cardiac reconstruction from sparse data. By combining deformable Gaussian Splatting with Neural ODEs and differentiable radiological rendering, our system provides high-fidelity, anatomically consistent volumes and smooth temporal dynamics. This approach offers significant potential for enhancing the diagnostic value of sparse cardiac imaging protocols.
+The current state of the project is best described as a stabilized sparse reconstruction prototype. It produces more meaningful outputs than the earlier saturated version, but it still does not fully recover a crisp internal cavity structure or a validated temporal evolution.
