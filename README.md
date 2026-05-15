@@ -56,7 +56,7 @@ python3 src_code/scripts/animate_4d.py
 python3 src_code/scripts/evaluate_3d.py --checkpoint runs/stabilization_v01/checkpoint_epoch_20.pth
 ```
 
-The 3D evaluation writes a comparison image and `metrics.json` with occupancy accuracy, IoU, and wall-versus-cavity separation metrics. Checkpoints, diagnostics, and animations are saved in `runs/`.
+The 3D evaluation writes a comparison image and `metrics.json` with occupancy accuracy, IoU, and regional occupancy diagnostics. Checkpoints, diagnostics, and animations are saved in `runs/`.
 
 ## Documentation
 

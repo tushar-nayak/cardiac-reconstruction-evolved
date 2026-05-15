@@ -33,15 +33,15 @@ def sample_metric_points(gt_vol, affine, num_points, device):
         raise ValueError("Selected sample has no occupied voxels.")
 
     num_pos = num_points // 3
-    num_cavity = num_points // 3
-    num_uniform = num_points - num_pos - num_cavity
+    num_centroid = num_points // 3
+    num_uniform = num_points - num_pos - num_centroid
 
     sel = occ_indices[torch.randint(0, len(occ_indices), (num_pos,), device=device)]
     pts_pos_img = sel[:, [2, 1, 0]].float()
 
     centroid_img = occ_indices.float().mean(dim=0)[[2, 1, 0]]
     spread_img = occ_indices.float().std(dim=0, unbiased=False)[[2, 1, 0]].clamp_min(4.0)
-    pts_cavity_img = centroid_img.unsqueeze(0) + torch.randn(num_cavity, 3, device=device) * (spread_img * 0.15)
+    pts_centroid_img = centroid_img.unsqueeze(0) + torch.randn(num_centroid, 3, device=device) * (spread_img * 0.15)
 
     D, H, W = volume.shape
     pts_uniform_img = torch.stack([
@@ -50,11 +50,11 @@ def sample_metric_points(gt_vol, affine, num_points, device):
         torch.rand(num_uniform, device=device) * (D - 1),
     ], dim=-1)
 
-    points_img = torch.cat([pts_pos_img, pts_cavity_img, pts_uniform_img], dim=0)
+    points_img = torch.cat([pts_pos_img, pts_centroid_img, pts_uniform_img], dim=0)
     regions = {
         'wall': slice(0, num_pos),
-        'cavity': slice(num_pos, num_pos + num_cavity),
-        'uniform': slice(num_pos + num_cavity, num_points),
+        'centroid': slice(num_pos, num_pos + num_centroid),
+        'uniform': slice(num_pos + num_centroid, num_points),
     }
     return image_to_world(points_img, affine, device), regions
 
@@ -128,12 +128,12 @@ def evaluate_3d(args):
         'accuracy': torch.eq(pred_mask, target_mask).float().mean().item(),
         'iou': intersection / max(union, 1),
         'mean_pred_wall': metric_pred[:, regions['wall']].mean().item(),
-        'mean_pred_cavity': metric_pred[:, regions['cavity']].mean().item(),
+        'mean_pred_centroid': metric_pred[:, regions['centroid']].mean().item(),
         'mean_pred_uniform': metric_pred[:, regions['uniform']].mean().item(),
         'mean_target_wall': metric_target[:, regions['wall']].mean().item(),
-        'mean_target_cavity': metric_target[:, regions['cavity']].mean().item(),
-        'wall_cavity_gap': (
-            metric_pred[:, regions['wall']].mean() - metric_pred[:, regions['cavity']].mean()
+        'mean_target_centroid': metric_target[:, regions['centroid']].mean().item(),
+        'wall_centroid_gap': (
+            metric_pred[:, regions['wall']].mean() - metric_pred[:, regions['centroid']].mean()
         ).item(),
     }
 

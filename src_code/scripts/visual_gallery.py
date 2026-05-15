@@ -15,14 +15,21 @@ from src_code.src.models.gaussian_model import GaussianModel
 
 DEFAULT_DATA_DIR = "/home/sofa/host_dir/cardiac_reconstruction_project/cap-mitea/mitea"
 
+def infer_num_gaussians(checkpoint, fallback):
+    state = checkpoint.get('gaussian_model_state_dict', {})
+    means = state.get('means')
+    return int(means.shape[0]) if means is not None else fallback
+
 def generate_gallery(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = args.output_path or os.path.join(os.path.dirname(args.checkpoint), "visual_gallery.png")
 
-    encoder = LatentEncoder(3, args.latent_dim).to(device)
-    gaussian_model = GaussianModel(args.num_gaussians, args.latent_dim).to(device)
-
     checkpoint = torch.load(args.checkpoint, map_location=device)
+    num_gaussians = infer_num_gaussians(checkpoint, args.num_gaussians)
+
+    encoder = LatentEncoder(3, args.latent_dim).to(device)
+    gaussian_model = GaussianModel(num_gaussians, args.latent_dim).to(device)
+
     encoder.load_state_dict(checkpoint['encoder_state_dict'])
     gaussian_model.load_state_dict(checkpoint['gaussian_model_state_dict'])
     encoder.eval(); gaussian_model.eval()
