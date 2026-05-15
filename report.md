@@ -6,6 +6,10 @@ Accurate 3D reconstruction from sparse 2D imaging remains a useful testbed for s
 ## Introduction
 Standard sparse imaging setups often lack enough context for direct volumetric reconstruction. This repository investigates whether an explicit field of Gaussian occupancy kernels can serve as a stable intermediate representation for sparse cardiac reconstruction. The emphasis is not yet on broad subject generalization, but on making the geometry, supervision path, and extracted surfaces easy to inspect. The project therefore sits between a pure research prototype and a visualization-first reconstruction system.
 
+![Model architecture](docs/assets/model_architecture.svg)
+
+*Figure 1. Overview of the current Gaussian occupancy reconstruction pipeline, from sparse labels to fitted occupancy field and mesh extraction.*
+
 ## Materials and Methods
 
 ### 1. Gaussian Occupancy Fields
@@ -47,11 +51,11 @@ The strongest current reconstruction yields a coherent ventricular-like envelope
 
 ![Orthogonal slice comparison](docs/assets/comparison_v01.png)
 
-*Figure 1. Ground-truth and predicted slice comparisons from the current subject-fit reconstruction.*
+*Figure 2. Ground-truth and predicted slice comparisons from the current subject-fit reconstruction.*
 
 ![Orthogonal gallery](docs/assets/visual_gallery.png)
 
-*Figure 2. Additional axial, coronal, and sagittal views of the reconstructed occupancy field.*
+*Figure 3. Additional axial, coronal, and sagittal views of the reconstructed occupancy field.*
 
 ### 3. Temporal Dynamics
 Temporal dynamics remain secondary in the current repository state. The animation scripts are still present and useful for inspecting continuity in the latent-dynamics branch, but the current report should be read as a static reconstruction update rather than as a validated 4D motion study.
