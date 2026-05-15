@@ -54,6 +54,13 @@ h1 {
   font-weight: 500;
 }
 
+.title-current {
+  font-size: 0.58em;
+  vertical-align: baseline;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
 h2 {
   font-size: clamp(1.7rem, 4vw, 3rem);
   font-weight: 500;
