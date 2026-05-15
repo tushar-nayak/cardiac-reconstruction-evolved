@@ -60,7 +60,7 @@ The 3D evaluation writes a comparison image and `metrics.json` with occupancy ac
 
 ## Documentation
 
-For a detailed technical breakdown of the methodology and results, please refer to the [Scientific Manuscript](report.md).
+For a detailed technical breakdown of the methodology and results, please refer to the [Report](report.md).
 
 ## Installation & Dependencies
 
