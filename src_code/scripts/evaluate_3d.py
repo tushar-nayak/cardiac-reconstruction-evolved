@@ -1,6 +1,7 @@
 import sys
 import os
 import argparse
+import json
 import torch
 import matplotlib.pyplot as plt
 
@@ -12,19 +13,62 @@ if project_root not in sys.path:
 from src_code.src.data_loaders.mitea_loader import MITEADataset
 from src_code.src.models.ode_model import LatentEncoder
 from src_code.src.models.gaussian_model import GaussianModel
+from src_code.src.utils.coord_utils import sample_volume_at_points
 
 DEFAULT_DATA_DIR = "/home/sofa/host_dir/cardiac_reconstruction_project/cap-mitea/mitea"
+
+def infer_num_gaussians(checkpoint, fallback):
+    state = checkpoint.get('gaussian_model_state_dict', {})
+    means = state.get('means')
+    return int(means.shape[0]) if means is not None else fallback
+
+def image_to_world(points_img, affine, device):
+    points_h = torch.cat([points_img, torch.ones(points_img.shape[0], 1, device=device)], dim=-1)
+    return (points_h @ affine.to(device).T)[:, :3]
+
+def sample_metric_points(gt_vol, affine, num_points, device):
+    volume = torch.from_numpy(gt_vol).to(device)
+    occ_indices = torch.nonzero(volume)
+    if len(occ_indices) == 0:
+        raise ValueError("Selected sample has no occupied voxels.")
+
+    num_pos = num_points // 3
+    num_cavity = num_points // 3
+    num_uniform = num_points - num_pos - num_cavity
+
+    sel = occ_indices[torch.randint(0, len(occ_indices), (num_pos,), device=device)]
+    pts_pos_img = sel[:, [2, 1, 0]].float()
+
+    centroid_img = occ_indices.float().mean(dim=0)[[2, 1, 0]]
+    spread_img = occ_indices.float().std(dim=0, unbiased=False)[[2, 1, 0]].clamp_min(4.0)
+    pts_cavity_img = centroid_img.unsqueeze(0) + torch.randn(num_cavity, 3, device=device) * (spread_img * 0.15)
+
+    D, H, W = volume.shape
+    pts_uniform_img = torch.stack([
+        torch.rand(num_uniform, device=device) * (W - 1),
+        torch.rand(num_uniform, device=device) * (H - 1),
+        torch.rand(num_uniform, device=device) * (D - 1),
+    ], dim=-1)
+
+    points_img = torch.cat([pts_pos_img, pts_cavity_img, pts_uniform_img], dim=0)
+    regions = {
+        'wall': slice(0, num_pos),
+        'cavity': slice(num_pos, num_pos + num_cavity),
+        'uniform': slice(num_pos + num_cavity, num_points),
+    }
+    return image_to_world(points_img, affine, device), regions
 
 def evaluate_3d(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_dir = args.output_dir or os.path.join(os.path.dirname(args.checkpoint), "eval_3d")
     os.makedirs(output_dir, exist_ok=True)
 
-    encoder = LatentEncoder(3, args.latent_dim).to(device)
-    gaussian_model = GaussianModel(args.num_gaussians, args.latent_dim).to(device)
-
     print(f"Loading checkpoint {args.checkpoint}...")
     checkpoint = torch.load(args.checkpoint, map_location=device)
+    num_gaussians = infer_num_gaussians(checkpoint, args.num_gaussians)
+
+    encoder = LatentEncoder(3, args.latent_dim).to(device)
+    gaussian_model = GaussianModel(num_gaussians, args.latent_dim).to(device)
     encoder.load_state_dict(checkpoint['encoder_state_dict'])
     gaussian_model.load_state_dict(checkpoint['gaussian_model_state_dict'])
     encoder.eval(); gaussian_model.eval()
@@ -68,6 +112,31 @@ def evaluate_3d(args):
         pts_coronal_world = (torch.cat([pts_img_coronal, torch.ones(pts_img_coronal.shape[0], 1)], dim=-1) @ affine.T)[:, :3].to(device)
         occ_coronal = gaussian_model.evaluate_occupancy(pts_coronal_world.unsqueeze(0), params_ed).view(args.slice_resolution, args.slice_resolution).cpu().numpy()
 
+        metric_points, regions = sample_metric_points(gt_vol, affine, args.metric_points, device)
+        metric_pred = gaussian_model.evaluate_occupancy(metric_points.unsqueeze(0), params_ed)
+        metric_target = sample_volume_at_points([sample['occupancy_ed']], metric_points.unsqueeze(0), affine.unsqueeze(0).to(device))
+
+    pred_mask = metric_pred > args.threshold
+    target_mask = metric_target > 0.5
+    intersection = torch.logical_and(pred_mask, target_mask).sum().item()
+    union = torch.logical_or(pred_mask, target_mask).sum().item()
+    metrics = {
+        'checkpoint': args.checkpoint,
+        'sample_index': args.sample_index,
+        'num_gaussians': num_gaussians,
+        'threshold': args.threshold,
+        'accuracy': torch.eq(pred_mask, target_mask).float().mean().item(),
+        'iou': intersection / max(union, 1),
+        'mean_pred_wall': metric_pred[:, regions['wall']].mean().item(),
+        'mean_pred_cavity': metric_pred[:, regions['cavity']].mean().item(),
+        'mean_pred_uniform': metric_pred[:, regions['uniform']].mean().item(),
+        'mean_target_wall': metric_target[:, regions['wall']].mean().item(),
+        'mean_target_cavity': metric_target[:, regions['cavity']].mean().item(),
+        'wall_cavity_gap': (
+            metric_pred[:, regions['wall']].mean() - metric_pred[:, regions['cavity']].mean()
+        ).item(),
+    }
+
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
     axes[0, 0].imshow(gt_vol[D//2, :, :], cmap='gray')
@@ -86,6 +155,11 @@ def evaluate_3d(args):
     plt.savefig(save_path)
     print(f"Evaluation saved to {save_path}")
 
+    metrics_path = os.path.join(output_dir, "metrics.json")
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump(metrics, f, indent=2)
+    print(f"Metrics saved to {metrics_path}")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=str, required=True)
@@ -96,4 +170,6 @@ if __name__ == "__main__":
     parser.add_argument("--latent-dim", type=int, default=128)
     parser.add_argument("--num-gaussians", type=int, default=1000)
     parser.add_argument("--slice-resolution", type=int, default=128)
+    parser.add_argument("--metric-points", type=int, default=3000)
+    parser.add_argument("--threshold", type=float, default=0.5)
     evaluate_3d(parser.parse_args())
