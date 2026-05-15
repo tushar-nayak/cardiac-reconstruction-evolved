@@ -40,7 +40,10 @@ Standard 3D/4D Gaussian Splatting (3DGS) relies on dense multi-view RGB images. 
 
 ### Training
 ```bash
-python3 src_code/scripts/train.py --epochs 50
+python3 src_code/scripts/train.py \
+  --data-dir /path/to/mitea \
+  --run-dir runs/stabilization_v01 \
+  --epochs 50
 ```
 
 ### 4D Animation
@@ -53,7 +56,7 @@ python3 src_code/scripts/animate_4d.py
 python3 src_code/scripts/evaluate_3d.py --checkpoint runs/stabilization_v01/checkpoint_epoch_20.pth
 ```
 
-Checkpoints and animations are saved in `runs/`.
+The 3D evaluation writes a comparison image and `metrics.json` with occupancy accuracy, IoU, and wall-versus-cavity separation metrics. Checkpoints, diagnostics, and animations are saved in `runs/`.
 
 ## Documentation
 
