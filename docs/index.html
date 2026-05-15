@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cardiac Reconstruction Evolved</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <p class="eyebrow">Sparse cardiac imaging to 3D occupancy</p>
+        <h1>Cardiac Reconstruction Evolved</h1>
+        <p class="lead">
+          Stabilized Gaussian occupancy fields reconstruct a 3D cardiac label volume from sparse 2D slices, with direct visual and quantitative diagnostics.
+        </p>
+      </header>
+
+      <section class="metrics" aria-label="Reconstruction metrics">
+        <article>
+          <span class="value">0.923</span>
+          <span class="label">sampled accuracy</span>
+        </article>
+        <article>
+          <span class="value">0.895</span>
+          <span class="label">sampled IoU</span>
+        </article>
+        <article>
+          <span class="value">500</span>
+          <span class="label">Gaussians</span>
+        </article>
+        <article>
+          <span class="value">1</span>
+          <span class="label">working epoch</span>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <h2>Interactive Reconstruction</h2>
+          <p>Predicted occupied points from the working checkpoint, sampled from the reconstructed volume.</p>
+        </div>
+        <div class="viewer-shell">
+          <div id="viewer" class="viewer" role="img" aria-label="Interactive 3D point cloud of the reconstructed cardiac occupancy field"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <h2>Results</h2>
+          <p>Ground truth and predicted orthogonal slices from the current working reconstruction run.</p>
+        </div>
+        <div class="image-grid">
+          <figure>
+            <img src="assets/comparison_v01.png" alt="Ground truth and predicted axial and coronal reconstruction comparison">
+            <figcaption>Direct 3D evaluation slices</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/visual_gallery.png" alt="Gallery of ground truth and predicted axial, coronal, and sagittal slices">
+            <figcaption>Orthogonal slice gallery</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section compact">
+        <h2>Method</h2>
+        <p>
+          The model initializes Gaussian centers from occupied voxels, uses non-saturating occupancy aggregation,
+          and trains with sparse slice supervision plus sampled 3D occupancy points. The current run is intentionally small:
+          it verifies that the reconstruction path produces a measurable checkpoint and viewable artifacts.
+        </p>
+        <pre><code>python3 src_code/scripts/train.py --epochs 1 --checkpoint-every 1 --run-dir runs/reconstruction_working_v01 --batch-size 1 --num-samples 512 --num-gaussians 500 --image-loss-weight 0.05 --sparse-loss-weight 0.01</code></pre>
+      </section>
+    </main>
+
+    <script src="viewer.js"></script>
+  </body>
+</html>

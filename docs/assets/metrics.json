@@ -1,0 +1,14 @@
+{
+  "checkpoint": "runs/reconstruction_working_v01/checkpoint_epoch_1.pth",
+  "sample_index": 0,
+  "num_gaussians": 500,
+  "threshold": 0.5,
+  "accuracy": 0.9233333468437195,
+  "iou": 0.8947849954254345,
+  "mean_pred_wall": 0.7395932674407959,
+  "mean_pred_centroid": 0.9209789633750916,
+  "mean_pred_uniform": 0.18918605148792267,
+  "mean_target_wall": 1.0,
+  "mean_target_centroid": 1.0,
+  "wall_centroid_gap": -0.18138569593429565
+}
