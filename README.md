@@ -65,3 +65,16 @@ For a detailed technical breakdown of the methodology and results, please refer 
 ## Installation & Dependencies
 
 Requires `torch`, `torchvision`, `torchdiffeq`, and `pytorch3d`.
+
+## Relation to Prior Project
+
+This repository is distinct from the earlier [`cardiac-volume-reconstruction`](https://github.com/tushar-nayak/cardiac-volume-reconstruction) project.
+
+The older project is the stronger baseline in terms of end-to-end experimental maturity. It focuses on reconstructing 3D cardiac volumes from sparse 2D echo views using coordinate-based implicit neural representations, transfer learning, and meta-learning for fast subject adaptation. Its central result is a multi-subject reconstruction pipeline with reported Dice and IoU summaries across saved experiments.
+
+This repository explores a different modeling direction. Instead of representing anatomy with an MLP-based implicit field, it uses explicit Gaussian occupancy primitives, differentiable slice rendering, and diagnostic tooling built around occupancy stability, mesh extraction, and visual inspection. In practice, this makes `cardiac-reconstruction-evolved` more of a Gaussian-field reconstruction prototype and experimentation branch, whereas `cardiac-volume-reconstruction` is the more complete INR-based cardiac reconstruction project.
+
+In short:
+
+* `cardiac-volume-reconstruction`: established INR / meta-learning cardiac reconstruction pipeline with broader evaluation.
+* `cardiac-reconstruction-evolved`: experimental Gaussian occupancy reconstruction path focused on explicit primitives, stabilization, and mesh-oriented diagnostics.
