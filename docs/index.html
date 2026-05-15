@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cardiac Reconstruction Evolved</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=3">
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   </head>
   <body>
@@ -13,36 +13,36 @@
         <p class="eyebrow">Sparse cardiac imaging to 3D occupancy</p>
         <h1>Cardiac Reconstruction Evolved</h1>
         <p class="lead">
-          Stabilized Gaussian occupancy fields reconstruct a 3D cardiac label volume from sparse 2D slices, with direct visual and quantitative diagnostics.
+          Stabilized Gaussian occupancy fields reconstruct a 3D cardiac label volume, with a fitted mesh surface and direct visual diagnostics.
         </p>
       </header>
 
       <section class="metrics" aria-label="Reconstruction metrics">
         <article>
-          <span class="value">0.923</span>
+          <span class="value">0.966</span>
           <span class="label">sampled accuracy</span>
         </article>
         <article>
-          <span class="value">0.895</span>
+          <span class="value">0.950</span>
           <span class="label">sampled IoU</span>
         </article>
         <article>
-          <span class="value">500</span>
+          <span class="value">1800</span>
           <span class="label">Gaussians</span>
         </article>
         <article>
-          <span class="value">1</span>
-          <span class="label">working epoch</span>
+          <span class="value">600</span>
+          <span class="label">fit steps</span>
         </article>
       </section>
 
       <section class="section">
         <div class="section-heading">
           <h2>Interactive Reconstruction</h2>
-          <p>Predicted occupied points from the working checkpoint, sampled from the reconstructed volume.</p>
+          <p>Marching-cubes isosurface extracted from the fitted Gaussian occupancy volume.</p>
         </div>
         <div class="viewer-shell">
-          <div id="viewer" class="viewer" role="img" aria-label="Interactive 3D point cloud of the reconstructed cardiac occupancy field"></div>
+          <div id="viewer" class="viewer" role="img" aria-label="Interactive 3D mesh of the reconstructed cardiac occupancy field"></div>
         </div>
       </section>
 
@@ -68,12 +68,12 @@
         <p>
           The model initializes Gaussian centers from occupied voxels, uses non-saturating occupancy aggregation,
           and trains with sparse slice supervision plus sampled 3D occupancy points. The current run is intentionally small:
-          it verifies that the reconstruction path produces a measurable checkpoint and viewable artifacts.
+          it fits one subject directly to produce a clean reconstruction mesh and measurable artifacts.
         </p>
-        <pre><code>python3 src_code/scripts/train.py --epochs 1 --checkpoint-every 1 --run-dir runs/reconstruction_working_v01 --batch-size 1 --num-samples 512 --num-gaussians 500 --image-loss-weight 0.05 --sparse-loss-weight 0.01</code></pre>
+        <pre><code>python3 src_code/scripts/fit_subject_reconstruction.py --run-dir runs/subject_fit_v01 --split val --sample-index 0 --num-gaussians 1800 --num-samples 4096 --steps 600</code></pre>
       </section>
     </main>
 
-    <script src="viewer.js"></script>
+    <script src="viewer.js?v=2"></script>
   </body>
 </html>

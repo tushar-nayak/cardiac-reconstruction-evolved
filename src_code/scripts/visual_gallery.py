@@ -16,9 +16,27 @@ from src_code.src.models.gaussian_model import GaussianModel
 DEFAULT_DATA_DIR = "/home/sofa/host_dir/cardiac_reconstruction_project/cap-mitea/mitea"
 
 def infer_num_gaussians(checkpoint, fallback):
+    if checkpoint.get('type') == 'subject_gaussian_fit':
+        return int(checkpoint['num_gaussians'])
     state = checkpoint.get('gaussian_model_state_dict', {})
     means = state.get('means')
     return int(means.shape[0]) if means is not None else fallback
+
+def load_params(checkpoint, sample, device, latent_dim, num_gaussians):
+    if checkpoint.get('type') == 'subject_gaussian_fit':
+        return {
+            'means': checkpoint['means'].to(device),
+            'scales': checkpoint['scales'].to(device),
+            'opacities': checkpoint['opacities'].to(device),
+        }
+
+    encoder = LatentEncoder(3, latent_dim).to(device)
+    gaussian_model = GaussianModel(num_gaussians, latent_dim).to(device)
+    encoder.load_state_dict(checkpoint['encoder_state_dict'])
+    gaussian_model.load_state_dict(checkpoint['gaussian_model_state_dict'])
+    encoder.eval(); gaussian_model.eval()
+    z_ed = encoder(sample['sparse_slices_ed'].unsqueeze(0).to(device))
+    return gaussian_model(z_ed)
 
 def generate_gallery(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -26,13 +44,6 @@ def generate_gallery(args):
 
     checkpoint = torch.load(args.checkpoint, map_location=device)
     num_gaussians = infer_num_gaussians(checkpoint, args.num_gaussians)
-
-    encoder = LatentEncoder(3, args.latent_dim).to(device)
-    gaussian_model = GaussianModel(num_gaussians, args.latent_dim).to(device)
-
-    encoder.load_state_dict(checkpoint['encoder_state_dict'])
-    gaussian_model.load_state_dict(checkpoint['gaussian_model_state_dict'])
-    encoder.eval(); gaussian_model.eval()
 
     dataset = MITEADataset(args.data_dir, split=args.split)
     sample = dataset[args.sample_index]
@@ -52,9 +63,9 @@ def generate_gallery(args):
     pts_world = (pts_h @ affine_th.T)[:, :3].to(device)
 
     with torch.no_grad():
-        z_ed = encoder(sample['sparse_slices_ed'].unsqueeze(0).to(device))
-        params_ed = gaussian_model(z_ed)
-        occ_pred = gaussian_model.evaluate_occupancy(pts_world.unsqueeze(0), params_ed)
+        params_ed = load_params(checkpoint, sample, device, args.latent_dim, num_gaussians)
+        model = GaussianModel(num_gaussians, args.latent_dim).to(device)
+        occ_pred = model.evaluate_occupancy(pts_world.unsqueeze(0), params_ed)
         pred_vol = occ_pred.view(res, res, res).cpu().numpy()
 
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))

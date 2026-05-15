@@ -1,29 +1,27 @@
 async function loadViewer() {
   const target = document.getElementById("viewer");
-  const response = await fetch("assets/reconstruction_points.json");
-  const points = await response.json();
+  const response = await fetch("assets/reconstruction_mesh.json");
+  const mesh = await response.json();
 
   const trace = {
-    type: "scatter3d",
-    mode: "markers",
-    x: points.x,
-    y: points.y,
-    z: points.z,
-    marker: {
-      size: 3,
-      color: points.occupancy,
-      colorscale: [
-        [0, "#1d5f73"],
-        [0.5, "#e1b55d"],
-        [1, "#b84e35"]
-      ],
-      opacity: 0.82,
-      colorbar: {
-        title: "occupancy",
-        thickness: 12
-      }
+    type: "mesh3d",
+    x: mesh.x,
+    y: mesh.y,
+    z: mesh.z,
+    i: mesh.i,
+    j: mesh.j,
+    k: mesh.k,
+    color: "#0057b8",
+    opacity: 0.72,
+    flatshading: false,
+    lighting: {
+      ambient: 0.46,
+      diffuse: 0.78,
+      roughness: 0.72,
+      specular: 0.18
     },
-    hovertemplate: "x=%{x:.1f}<br>y=%{y:.1f}<br>z=%{z:.1f}<br>occ=%{marker.color:.3f}<extra></extra>"
+    lightposition: { x: 120, y: 80, z: 180 },
+    hovertemplate: "x=%{x:.1f}<br>y=%{y:.1f}<br>z=%{z:.1f}<extra></extra>"
   };
 
   const layout = {

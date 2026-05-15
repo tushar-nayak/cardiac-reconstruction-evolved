@@ -18,9 +18,29 @@ from src_code.src.utils.coord_utils import sample_volume_at_points
 DEFAULT_DATA_DIR = "/home/sofa/host_dir/cardiac_reconstruction_project/cap-mitea/mitea"
 
 def infer_num_gaussians(checkpoint, fallback):
+    if checkpoint.get('type') == 'subject_gaussian_fit':
+        return int(checkpoint['num_gaussians'])
     state = checkpoint.get('gaussian_model_state_dict', {})
     means = state.get('means')
     return int(means.shape[0]) if means is not None else fallback
+
+def load_params(checkpoint, sample, device, latent_dim, num_gaussians):
+    if checkpoint.get('type') == 'subject_gaussian_fit':
+        return {
+            'means': checkpoint['means'].to(device),
+            'scales': checkpoint['scales'].to(device),
+            'opacities': checkpoint['opacities'].to(device),
+        }
+
+    encoder = LatentEncoder(3, latent_dim).to(device)
+    gaussian_model = GaussianModel(num_gaussians, latent_dim).to(device)
+    encoder.load_state_dict(checkpoint['encoder_state_dict'])
+    gaussian_model.load_state_dict(checkpoint['gaussian_model_state_dict'])
+    encoder.eval(); gaussian_model.eval()
+
+    input_ed = sample['sparse_slices_ed'].unsqueeze(0).to(device)
+    z_ed = encoder(input_ed)
+    return gaussian_model(z_ed)
 
 def image_to_world(points_img, affine, device):
     points_h = torch.cat([points_img, torch.ones(points_img.shape[0], 1, device=device)], dim=-1)
@@ -67,12 +87,6 @@ def evaluate_3d(args):
     checkpoint = torch.load(args.checkpoint, map_location=device)
     num_gaussians = infer_num_gaussians(checkpoint, args.num_gaussians)
 
-    encoder = LatentEncoder(3, args.latent_dim).to(device)
-    gaussian_model = GaussianModel(num_gaussians, args.latent_dim).to(device)
-    encoder.load_state_dict(checkpoint['encoder_state_dict'])
-    gaussian_model.load_state_dict(checkpoint['gaussian_model_state_dict'])
-    encoder.eval(); gaussian_model.eval()
-
     dataset = MITEADataset(args.data_dir, split=args.split)
     sample = dataset[args.sample_index]
     gt_vol = sample['occupancy_ed'].cpu().numpy() # (D, H, W)
@@ -102,18 +116,17 @@ def evaluate_3d(args):
     pts_img_coronal = torch.stack([grid_u, torch.ones_like(grid_u) * y_idx, grid_w], dim=-1).reshape(-1, 3)
 
     with torch.no_grad():
-        input_ed = sample['sparse_slices_ed'].unsqueeze(0).to(device)
-        z_ed = encoder(input_ed)
-        params_ed = gaussian_model(z_ed)
+        params_ed = load_params(checkpoint, sample, device, args.latent_dim, num_gaussians)
         
         pts_axial_world = (torch.cat([pts_img_axial, torch.ones(pts_img_axial.shape[0], 1)], dim=-1) @ affine.T)[:, :3].to(device)
-        occ_axial = gaussian_model.evaluate_occupancy(pts_axial_world.unsqueeze(0), params_ed).view(args.slice_resolution, args.slice_resolution).cpu().numpy()
+        model = GaussianModel(num_gaussians, args.latent_dim).to(device)
+        occ_axial = model.evaluate_occupancy(pts_axial_world.unsqueeze(0), params_ed).view(args.slice_resolution, args.slice_resolution).cpu().numpy()
         
         pts_coronal_world = (torch.cat([pts_img_coronal, torch.ones(pts_img_coronal.shape[0], 1)], dim=-1) @ affine.T)[:, :3].to(device)
-        occ_coronal = gaussian_model.evaluate_occupancy(pts_coronal_world.unsqueeze(0), params_ed).view(args.slice_resolution, args.slice_resolution).cpu().numpy()
+        occ_coronal = model.evaluate_occupancy(pts_coronal_world.unsqueeze(0), params_ed).view(args.slice_resolution, args.slice_resolution).cpu().numpy()
 
         metric_points, regions = sample_metric_points(gt_vol, affine, args.metric_points, device)
-        metric_pred = gaussian_model.evaluate_occupancy(metric_points.unsqueeze(0), params_ed)
+        metric_pred = model.evaluate_occupancy(metric_points.unsqueeze(0), params_ed)
         metric_target = sample_volume_at_points([sample['occupancy_ed']], metric_points.unsqueeze(0), affine.unsqueeze(0).to(device))
 
     pred_mask = metric_pred > args.threshold
