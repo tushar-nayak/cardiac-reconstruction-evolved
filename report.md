@@ -6,7 +6,7 @@ Accurate 3D reconstruction from sparse 2D imaging remains a useful testbed for s
 ## Introduction
 Standard sparse imaging setups often lack enough context for direct volumetric reconstruction. This repository investigates whether an explicit field of Gaussian occupancy kernels can serve as a stable intermediate representation for sparse cardiac reconstruction. The emphasis is not yet on broad subject generalization, but on making the geometry, supervision path, and extracted surfaces easy to inspect. The project therefore sits between a pure research prototype and a visualization-first reconstruction system.
 
-![Model architecture](docs/assets/model_architecture.svg)
+<!-- ![Model architecture](docs/assets/model_architecture.svg) -->
 
 *Figure 1. Overview of the current Gaussian occupancy reconstruction pipeline, from sparse labels to fitted occupancy field and mesh extraction.*
 
