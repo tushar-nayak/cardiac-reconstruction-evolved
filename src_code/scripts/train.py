@@ -63,33 +63,29 @@ def sample_query_points(volume, affine, num_samples, device):
     return points, weights
 
 def train(args):
-    # Config
-    data_dir = "/home/sofa/host_dir/cardiac_reconstruction_project/cap-mitea/mitea"
-    run_dir = "runs/stabilization_v01"
-    os.makedirs(run_dir, exist_ok=True)
+    os.makedirs(args.run_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    batch_size = 4
-    latent_dim = 128
-    num_gaussians = 1000
-    lr = 5e-4
-    epochs = args.epochs
 
-    # Data
-    dataset = MITEADataset(data_dir, split='train')
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
+    dataset = MITEADataset(args.data_dir, split=args.split)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        collate_fn=collate_fn,
+    )
 
-    # Models
-    encoder = LatentEncoder(input_channels=3, latent_dim=latent_dim).to(device)
-    gaussian_model = GaussianModel(num_gaussians=num_gaussians, latent_dim=latent_dim).to(device)
+    encoder = LatentEncoder(input_channels=3, latent_dim=args.latent_dim).to(device)
+    gaussian_model = GaussianModel(num_gaussians=args.num_gaussians, latent_dim=args.latent_dim).to(device)
     rasterizer = RadiologicalRasterizer().to(device)
     pose_optimizer = PoseOptimizer(num_subjects=len(dataset)).to(device)
 
     optimizer = torch.optim.Adam(
         list(encoder.parameters()) + list(gaussian_model.parameters()) + list(pose_optimizer.parameters()),
-        lr=lr
+        lr=args.lr
     )
 
-    for epoch in range(epochs):
+    for epoch in range(args.epochs):
         pbar = tqdm.tqdm(enumerate(dataloader), desc=f"Epoch {epoch}", total=len(dataloader))
         for batch_idx, batch in pbar:
             if epoch == 0 and batch_idx == 0:
@@ -103,14 +99,13 @@ def train(args):
             params_ed = gaussian_model(z_ed)
             refined_poses_ed = pose_optimizer(subject_indices, batch['poses_ed'])
 
-            num_samples = 2000
             query_points = []
             query_weights = []
             for i in range(B):
                 pts_i, weights_i = sample_query_points(
                     batch['occupancy_ed'][i],
                     batch['affine'][i],
-                    num_samples,
+                    args.num_samples,
                     device,
                 )
                 query_points.append(pts_i)
@@ -140,24 +135,37 @@ def train(args):
             
             loss_img = loss_img / (B * len(refined_poses_ed[0]))
             loss_sparse = torch.mean(params_ed['opacities']) + 0.01 * torch.mean(params_ed['scales'])
-            loss = loss_occ + 1.0 * loss_img + 0.1 * loss_sparse
+            loss = loss_occ + args.image_loss_weight * loss_img + args.sparse_loss_weight * loss_sparse
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             pbar.set_postfix({'loss': f"{loss.item():.4f}", 'occ': f"{loss_occ.item():.4f}", 'img': f"{loss_img.item():.4f}"})
 
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % args.checkpoint_every == 0:
             torch.save({
                 'epoch': epoch,
+                'config': vars(args),
                 'encoder_state_dict': encoder.state_dict(),
                 'gaussian_model_state_dict': gaussian_model.state_dict(),
                 'pose_optimizer_state_dict': pose_optimizer.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
-            }, os.path.join(run_dir, f"checkpoint_epoch_{epoch+1}.pth"))
+            }, os.path.join(args.run_dir, f"checkpoint_epoch_{epoch+1}.pth"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--data-dir", type=str, default="/home/sofa/host_dir/cardiac_reconstruction_project/cap-mitea/mitea")
+    parser.add_argument("--run-dir", type=str, default="runs/stabilization_v01")
+    parser.add_argument("--split", type=str, default="train")
     parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument("--latent-dim", type=int, default=128)
+    parser.add_argument("--num-gaussians", type=int, default=1000)
+    parser.add_argument("--num-samples", type=int, default=2000)
+    parser.add_argument("--lr", type=float, default=5e-4)
+    parser.add_argument("--image-loss-weight", type=float, default=1.0)
+    parser.add_argument("--sparse-loss-weight", type=float, default=0.1)
+    parser.add_argument("--checkpoint-every", type=int, default=10)
     args = parser.parse_args()
     train(args)
