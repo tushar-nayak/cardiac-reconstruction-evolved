@@ -111,11 +111,11 @@ h2 {
 .section-heading p,
 .compact p {
   max-width: 620px;
-  margin: 0;
+  margin: 0 0 14px;
   color: var(--muted);
 }
 
-.viewer-shell,
+.viewer-panel,
 figure,
 .compact {
   border: 1px solid var(--line);
@@ -124,13 +124,28 @@ figure,
   box-shadow: var(--shadow);
 }
 
-.viewer-shell {
+.viewer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.viewer-panel {
   padding: 10px;
+}
+
+.viewer-panel h3 {
+  margin: 4px 6px 10px;
+  color: var(--accent);
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 0.88rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .viewer {
   width: 100%;
-  height: min(68vh, 640px);
+  height: min(58vh, 560px);
   min-height: 420px;
 }
 
@@ -182,7 +197,8 @@ pre {
   }
 
   .metrics,
-  .image-grid {
+  .image-grid,
+  .viewer-grid {
     grid-template-columns: 1fr;
   }
 

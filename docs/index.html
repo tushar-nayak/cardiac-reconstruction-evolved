@@ -39,10 +39,17 @@
       <section class="section">
         <div class="section-heading">
           <h2>Interactive Reconstruction</h2>
-          <p>Marching-cubes isosurface extracted from the fitted Gaussian occupancy volume.</p>
+          <p>Predicted and ground-truth marching-cubes surfaces from the same validation sample.</p>
         </div>
-        <div class="viewer-shell">
-          <div id="viewer" class="viewer" role="img" aria-label="Interactive 3D mesh of the reconstructed cardiac occupancy field"></div>
+        <div class="viewer-grid">
+          <div class="viewer-panel">
+            <h3>Prediction</h3>
+            <div id="viewer-pred" class="viewer" role="img" aria-label="Interactive 3D mesh of the predicted cardiac occupancy field"></div>
+          </div>
+          <div class="viewer-panel">
+            <h3>Ground Truth</h3>
+            <div id="viewer-gt" class="viewer" role="img" aria-label="Interactive 3D mesh of the ground-truth cardiac label"></div>
+          </div>
         </div>
       </section>
 
@@ -66,14 +73,24 @@
       <section class="section compact">
         <h2>Method</h2>
         <p>
-          The model initializes Gaussian centers from occupied voxels, uses non-saturating occupancy aggregation,
-          and trains with sparse slice supervision plus sampled 3D occupancy points. The current run is intentionally small:
-          it fits one subject directly to produce a clean reconstruction mesh and measurable artifacts.
+          The reconstruction represents cardiac anatomy as a set of 3D Gaussian occupancy kernels rather than a dense voxel grid.
+          Gaussian centers are initialized from labeled occupied voxels, then their positions, scales, and opacities are optimized
+          against sampled volumetric occupancy targets from the selected validation subject.
         </p>
-        <pre><code>python3 src_code/scripts/fit_subject_reconstruction.py --run-dir runs/subject_fit_v01 --split val --sample-index 0 --num-gaussians 1800 --num-samples 4096 --steps 600</code></pre>
+        <p>
+          The occupancy value at any query point is computed with a non-saturating density rule, which accumulates nearby Gaussian
+          contributions as a soft volumetric field. After fitting, the field is sampled on a regular grid and converted into a
+          triangular surface using marching cubes at the 0.5 isosurface. The interactive viewer compares that predicted mesh
+          against a marching-cubes mesh extracted from the ground-truth label volume for the same sample.
+        </p>
+        <p>
+          This page shows the subject-specific fitted result used for visual inspection. It is not claiming population-level
+          generalization; the purpose is to make the Gaussian reconstruction path inspectable and to compare its recovered surface
+          against the available label geometry.
+        </p>
       </section>
     </main>
 
-    <script src="viewer.js?v=2"></script>
+    <script src="viewer.js?v=3"></script>
   </body>
 </html>
