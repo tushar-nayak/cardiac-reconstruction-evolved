@@ -4,41 +4,72 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C.svg)
 ![TorchDiffEq](https://img.shields.io/badge/TorchDiffEq-Latest-orange.svg)
 
-CardioEvolve-4DGS is a framework designed to recover continuous 3D ventricular occupancy fields from highly sparse (2-3 slices) and temporally distinct 2D echocardiography or cardiac MRI sequences. 
+Sparse cardiac reconstruction with stabilized Gaussian occupancy fields, differentiable slice supervision, and mesh-based evaluation for interpretable 3D anatomy recovery.
 
-Standard 3D/4D Gaussian Splatting (3DGS) relies on dense multi-view RGB images. This repository adapts the differential rendering pipeline to accumulate radiological density and volumetric depth. By treating the cardiac cycle as an explicit, continuous-time dynamics problem, it merges Neural ODE forecasting with Vision-Language Model (VLM) embeddings for comprehensive spatiotemporal tracking.
+This repository explores a Gaussian occupancy formulation for reconstructing cardiac anatomy from sparse imaging. Instead of representing the volume with a pure implicit MLP, it uses explicit 3D Gaussian primitives, a non-saturating occupancy rule, sparse-slice supervision, and marching-cubes mesh extraction for direct visual comparison against ground truth.
 
-## Key Features
+The current strongest result in this repo is a subject-specific reconstruction fit on the MITEA validation split. It is a working Gaussian-field reconstruction prototype with mesh-oriented diagnostics, not yet a mature multi-subject 4D Gaussian splatting system.
 
-* **Neural ODE Forecasting:** Overcomes the temporal sparsity of ultrasound and MRI scans. Utilizing `TorchDiffEq` and a hybrid Attention U-Net backend, the system evolves the latent states of the 3D Gaussian representation, smoothly interpolating ventricular contraction between observed frames.
-* **Radiological Splatting:** Rewrites the standard rasterizer to accumulate MRI/Ultrasound signal intensity and depth, allowing for the direct visualization of tissue density rather than alpha-composited light.
-* **Stable Occupancy Aggregation:** Replaced the naive sum-and-clamp aggregation with a physically-grounded volumetric formulation: `1 - exp(-density)`. This prevents saturation and allows for distinct cavity/wall separation.
-* **Aggressive Negative Mining:** Point sampling logic specifically targets the heart cavity (the "donut hole") with high-weight supervision to ensure anatomically correct reconstructions.
-* **Temporal Semantic Tracking:** Injects multi-modal VLM embeddings into the explicit Gaussian points. This enables dynamic, open-vocabulary queries such as isolating a specific valve or tracking the volumetric shift of a semantically-labeled region across the entire cardiac cycle.
+## What This Repo Does
 
-## System Architecture
-
-1. **Sparse Pose Optimization:** Learns slice alignment terms so the reconstruction can better match the observed 2D inputs.
-2. **Geometry Grounding:** Gaussian centers and opacities are initialized from occupied voxels to anchor the learned field to the observed anatomy.
-3. **Continuous Evolution:** The ODE solver drives the 4D Gaussian deformation field, morphing the initialized Gaussians across the cardiac time steps to ensure anatomically plausible continuous reconstruction.
-4. **Visualization and Diagnostics:** Unified evaluation scripts produce comparison figures and 4D animation outputs with explicit coordinate sanity checks.
+- Represents anatomy as explicit 3D Gaussian occupancy kernels.
+- Uses stabilized density aggregation: `occupancy(x) = 1 - exp(-density(x))`.
+- Supports differentiable sparse-slice supervision and pose refinement in the encoder-based path.
+- Includes a direct subject-fit pipeline that produces a usable mesh reconstruction.
+- Publishes qualitative and quantitative diagnostics through the report and GitHub Pages site.
 
 ## Current Results
 
-* **Stabilized Occupancy**: The model no longer collapses into a fully saturated field.
-* **Mean Occupancy at GT**: **0.9866** (where 1.0 is fully occupied) achieved during stabilization.
-* **Spatial Fidelity**: Successfully reconstructed circular axial cross-sections and conical longitudinal profiles from sparse orthogonal slices.
-* **4D Consistency**: Smooth ventricular contraction animations generated via Neural ODE, accurately depicting physiological systolic thickening.
+Current tracked subject-fit result from `runs/subject_fit_v01`:
 
-## Current Status
+- Sampled occupancy accuracy: `0.9655`
+- Sampled IoU: `0.9503`
+- Number of Gaussians: `1800`
+- Fit steps: `600`
 
-* **Phase 1-3 Complete:** Core architecture, 3D occupancy pipeline, Radiological Rasterizer, Pose Optimization, and VLM semantic embeddings are fully implemented.
-* **Stabilization Phase:** Focused on perfecting the static 3D geometry and cavity/wall separation before re-introducing full 4D dynamics.
-* **Visualization Ready:** 4D animation and 3D evaluation scripts are available for local review.
+Artifacts in this repository include:
 
-## Running the Scripts
+- Orthogonal slice comparison: [docs/assets/comparison_v01.png](docs/assets/comparison_v01.png)
+- Reconstruction gallery: [docs/assets/visual_gallery.png](docs/assets/visual_gallery.png)
+- Interactive mesh assets for the GitHub Pages site under [docs/assets](docs/assets)
 
-### Training
+## Main Workflows
+
+### 1. Subject-Specific Reconstruction
+
+This is the main working path in the repository right now.
+
+```bash
+python3 src_code/scripts/fit_subject_reconstruction.py \
+  --data-dir /path/to/mitea \
+  --run-dir runs/subject_fit_v01 \
+  --split val \
+  --sample-index 0 \
+  --num-gaussians 1800 \
+  --steps 600
+```
+
+### 2. 3D Evaluation
+
+```bash
+python3 src_code/scripts/evaluate_3d.py \
+  --checkpoint runs/subject_fit_v01/subject_fit.pth
+```
+
+This writes a comparison figure and `metrics.json` beside the checkpoint output.
+
+### 3. Visual Gallery
+
+```bash
+python3 src_code/scripts/visual_gallery.py \
+  --checkpoint runs/subject_fit_v01/subject_fit.pth \
+  --output-path runs/subject_fit_v01/visual_gallery.png
+```
+
+### 4. Encoder-Based Training Path
+
+The broader training path is still present for sparse-slice supervision experiments:
+
 ```bash
 python3 src_code/scripts/train.py \
   --data-dir /path/to/mitea \
@@ -46,25 +77,34 @@ python3 src_code/scripts/train.py \
   --epochs 50
 ```
 
-### 4D Animation
-```bash
-python3 src_code/scripts/animate_4d.py
-```
+This path includes the encoder, Gaussian generator, rasterizer, and pose optimizer, but it is not the strongest current result compared with the direct subject-fit workflow.
 
-### 3D Evaluation
-```bash
-python3 src_code/scripts/evaluate_3d.py --checkpoint runs/stabilization_v01/checkpoint_epoch_20.pth
-```
+## Project Status
 
-The 3D evaluation writes a comparison image and `metrics.json` with occupancy accuracy, IoU, and regional occupancy diagnostics. Checkpoints, diagnostics, and animations are saved in `runs/`.
+- `Working now`: static subject-specific Gaussian occupancy reconstruction with mesh extraction.
+- `Partially explored`: differentiable sparse-slice supervision and pose refinement.
+- `Experimental`: Neural ODE dynamics and 4D animation tooling.
+- `Not current mainline`: VLM-driven semantic tracking and dense multi-view 3DGS claims.
+
+The MITEA setup currently used here is best suited for static 3D reconstruction and limited ED/ES experiments, not for a full dense multi-view RGB 3DGS pipeline.
 
 ## Documentation
 
-For a detailed technical breakdown of the methodology and results, please refer to the [Report](report.md).
+- Technical report: [report.md](report.md)
+- GitHub Pages site: [docs/index.html](docs/index.html)
 
 ## Installation & Dependencies
 
-Requires `torch`, `torchvision`, `torchdiffeq`, and `pytorch3d`.
+Core dependencies used by the current pipeline:
+
+- `torch`
+- `torchvision`
+- `torchdiffeq`
+- `nibabel`
+- `numpy`
+- `matplotlib`
+
+Some older or optional paths may still assume additional packages such as `pytorch3d`.
 
 ## Relation to Prior Project
 
@@ -76,5 +116,5 @@ This repository explores a different modeling direction. Instead of representing
 
 In short:
 
-* `cardiac-volume-reconstruction`: established INR / meta-learning cardiac reconstruction pipeline with broader evaluation.
-* `cardiac-reconstruction-evolved`: experimental Gaussian occupancy reconstruction path focused on explicit primitives, stabilization, and mesh-oriented diagnostics.
+- `cardiac-volume-reconstruction`: established INR / meta-learning cardiac reconstruction pipeline with broader evaluation.
+- `cardiac-reconstruction-evolved`: experimental Gaussian occupancy reconstruction path focused on explicit primitives, stabilization, and mesh-oriented diagnostics.
